@@ -2,13 +2,14 @@
 Currently only tested on windows 10!
 
 ## Installation
-Download caddy and drop it in a location of your choice. Then load this repository into the same folder, the folder should look like this:
+Download [caddy server](https://caddyserver.com/download) and drop it in a location of your choice. \
+Then load the files of this repository into the same folder, the folder should then look like this:
 
-LocationOfYourChoice/caddy.exe
-LocationOfYourChoice/Caddyfile
-LocationOfYourChoice/server-manager/
-LocationOfYourChoice/start.gui.bat
-etc.
+- LocationOfYourChoice/caddy.exe \
+- LocationOfYourChoice/Caddyfile \
+- LocationOfYourChoice/server-manager/ \
+- LocationOfYourChoice/start.gui.bat \
+- etc.
 
 ## Usage
 1. Configure the "Caddyfile" to your needs

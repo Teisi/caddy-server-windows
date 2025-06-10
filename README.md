@@ -1,15 +1,25 @@
 # Super simple Caddy-Server files and config for windows only!
+Config ready for Wordpress, Shopware, TYPO3.
 Currently only tested on windows 10!
 
 ## Installation
 Download [caddy server](https://caddyserver.com/download) and drop it in a location of your choice. \
+Rename the downloaded caddy file (e. g. caddy_windows_amd64.exe) to "caddy.exe"! \
 Then load the files of this repository into the same folder, the folder should then look like this:
 
 - LocationOfYourChoice/caddy.exe \
 - LocationOfYourChoice/Caddyfile \
 - LocationOfYourChoice/server-manager/ \
 - LocationOfYourChoice/start.gui.bat \
-- etc.
+- etc. \
+
+(optional) For PHP download the version(s) you want from [https://windows.php.net/download/](https://windows.php.net/download/).
+Use the "Non Thread Safe" Versions for Windows! Don't forget to initialize / config the php.ini!
+You can use multiple PHP versions at the same time.
+
+(optional) For MySQL / MariaDB [download here](https://mariadb.org/download/?t=mariadb&p=mariadb&r=11.8.2&os=windows&cpu=x86_64&pkg=msi&mirror=archive).
+You can use multiple MySQL / MariaDB versions at the same time (with different ports!).
+
 
 ## Usage
 1. Configure the "Caddyfile" to your needs

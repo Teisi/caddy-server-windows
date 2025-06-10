@@ -24,7 +24,7 @@ if (-not $caddyExePath) {
 # 3. Wenn immer noch nicht gefunden, zeige Fehlermeldung
 if (-not $caddyExePath) {
     [System.Windows.Forms.MessageBox]::Show(
-        "Caddy.exe wurde weder im PATH noch im übergeordneten Verzeichnis gefunden.`n`nBitte stellen Sie sicher, dass Caddy korrekt installiert ist oder sich im Verzeichnis über dem 'server-manager' Ordner befindet.",
+        "Caddy.exe was not found in the PATH or parent directory.`n`nPlease make sure Caddy is installed correctly or is in the directory above the ‘server-manager’ folder.",
         "Error",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Error)
@@ -38,7 +38,7 @@ $caddyFilePath = Join-Path $caddyBasePath "Caddyfile"
 # Überprüfe ob Caddyfile existiert
 if (-not (Test-Path $caddyFilePath)) {
     [System.Windows.Forms.MessageBox]::Show(
-        "Caddyfile wurde nicht gefunden in: $caddyFilePath`n`nBitte stellen Sie sicher, dass sich die Caddyfile im gleichen Verzeichnis wie caddy.exe befindet.",
+        "Caddyfile was not found in: $caddyFilePath`n`nPlease make sure that the caddyfile is located in the same directory as caddy.exe.",
         "Error",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Error)
@@ -126,20 +126,64 @@ $form.Controls.Add($refreshButton)
 # $form.Controls.Add($urlsPanel)
 
 # Funktionen
+function Get-ServiceStatus {
+    param (
+        [string]$version,
+        [string]$taskName,
+        [string]$processPath
+    )
+
+    # Prüfe ob der Task existiert
+    $taskExists = schtasks /query /tn $taskName 2>$null
+
+    # Prüfe ob der Prozess läuft (suche nach php-cgi.exe mit dem spezifischen Pfad)
+    $processInfo = Get-WmiObject Win32_Process -Filter "Name = 'php-cgi.exe'" |
+                  Where-Object { $_.CommandLine -like "*$processPath*" }
+
+    if ($processInfo) {
+        return @{
+            Running = $true
+            Message = "Running (PID: $($processInfo.ProcessId))"
+            Color = [System.Drawing.Color]::Green
+        }
+    } elseif ($taskExists) {
+        # Task existiert, aber Prozess läuft nicht
+        return @{
+            Running = $false
+            Message = "Task exists but not running"
+            Color = [System.Drawing.Color]::Orange
+        }
+    } else {
+        # Weder Task noch Prozess existieren
+        return @{
+            Running = $false
+            Message = "Stopped"
+            Color = [System.Drawing.Color]::Red
+        }
+    }
+}
+
 function Update-Status {
     # PHP Status überprüfen
     foreach ($version in $config.php.PSObject.Properties) {
         $taskName = "PHP$($version.Name -replace '\.','')_CGI"
-        $status = schtasks /query /tn $taskName 2>$null
+        $phpPath = $version.Value.path
+
+        $status = Get-ServiceStatus -version $version.Name -taskName $taskName -processPath $phpPath
         $label = $statusLabels[$version.Name]
-        $label.Text = "PHP $($version.Name): " + $(if ($LASTEXITCODE -eq 0) { "Running" } else { "Stopped" })
-        $label.ForeColor = if ($LASTEXITCODE -eq 0) { [System.Drawing.Color]::Green } else { [System.Drawing.Color]::Red }
+        $label.Text = "PHP $($version.Name): $($status.Message)"
+        $label.ForeColor = $status.Color
     }
 
     # Caddy Status
     $caddyProcess = Get-Process -Name "caddy" -ErrorAction SilentlyContinue
-    $labelCaddy.Text = "Caddy: " + $(if ($caddyProcess) { "Running" } else { "Stopped" })
-    $labelCaddy.ForeColor = if ($caddyProcess) { [System.Drawing.Color]::Green } else { [System.Drawing.Color]::Red }
+    if ($caddyProcess) {
+        $labelCaddy.Text = "Caddy: Running (PID: $($caddyProcess.Id))"
+        $labelCaddy.ForeColor = [System.Drawing.Color]::Green
+    } else {
+        $labelCaddy.Text = "Caddy: Stopped"
+        $labelCaddy.ForeColor = [System.Drawing.Color]::Red
+    }
 }
 
 function Start-AllServices {

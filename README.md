@@ -1,6 +1,7 @@
 # Super simple Caddy-Server files and config for windows only with GUI!
 Config ready for TYPO3, should work also for all other PHP based systems like Wordpress or Shopware (please check the snippets/global.conf file to see if you need to make any adjustments for your PHP project, manly app_handler_php). \
 Currently only tested on windows 10! \
+Not for production usage and manly for me and my company, but feel free to use it at your own risk. :)
 This script (GUI) seems to ned administrator rights for default ports 80(http) / 443(https) therefore windows will ask you for permission.
 
 ## Installation

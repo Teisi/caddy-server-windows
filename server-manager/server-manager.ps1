@@ -104,26 +104,26 @@ $refreshButton.Text = 'Refresh Status'
 $refreshButton.BackColor = [System.Drawing.Color]::LightBlue
 $form.Controls.Add($refreshButton)
 
-# URLs Panel
-$urlsPanel = New-Object System.Windows.Forms.Panel
-$urlsPanel.Location = New-Object System.Drawing.Point(20,320)
-$urlsPanel.Size = New-Object System.Drawing.Size(340,120)
-$urlsPanel.BorderStyle = 'FixedSingle'
+# Maybe TODO Feature: URLs Panel
+# $urlsPanel = New-Object System.Windows.Forms.Panel
+# $urlsPanel.Location = New-Object System.Drawing.Point(20,320)
+# $urlsPanel.Size = New-Object System.Drawing.Size(340,120)
+# $urlsPanel.BorderStyle = 'FixedSingle'
 
-$urlLabel = New-Object System.Windows.Forms.Label
-$urlLabel.Location = New-Object System.Drawing.Point(10,10)
-$urlLabel.Size = New-Object System.Drawing.Size(320,100)
+# $urlLabel = New-Object System.Windows.Forms.Label
+# $urlLabel.Location = New-Object System.Drawing.Point(10,10)
+# $urlLabel.Size = New-Object System.Drawing.Size(320,100)
 
-# Dynamische URL-Liste basierend auf PHP-Versionen erstellen
-$urls = ""
-foreach ($version in $config.php.PSObject.Properties) {
-    $urls += "http://php$($version.Name -replace '\.','').localhost`n"
-    $urls += "https://php$($version.Name -replace '\.','').localhost`n"
-}
-$urlLabel.Text = "Available URLs:`n`n$urls"
+# # Dynamische URL-Liste basierend auf PHP-Versionen erstellen
+# $urls = ""
+# foreach ($version in $config.php.PSObject.Properties) {
+#     $urls += "http://php$($version.Name -replace '\.','').localhost`n"
+#     $urls += "https://php$($version.Name -replace '\.','').localhost`n"
+# }
+# $urlLabel.Text = "Available URLs:`n`n$urls"
 
-$urlsPanel.Controls.Add($urlLabel)
-$form.Controls.Add($urlsPanel)
+# $urlsPanel.Controls.Add($urlLabel)
+# $form.Controls.Add($urlsPanel)
 
 # Funktionen
 function Update-Status {

@@ -1,6 +1,7 @@
-# Super simple Caddy-Server files and config for windows only!
+# Super simple Caddy-Server files and config for windows only with GUI!
 Config ready for Wordpress, Shopware, TYPO3.
 Currently only tested on windows 10!
+This script (GUI) seems to ned administrator rights for default ports 80(http) / 443(https) therefore windows will ask you for permission.
 
 ## Installation
 Download [caddy server](https://caddyserver.com/download) and drop it in a location of your choice. \
@@ -22,15 +23,18 @@ You can use multiple MySQL / MariaDB versions at the same time (with different p
 
 
 ## Usage
-1. Configure the "Caddyfile" to your needs
+1. Configure the "Caddyfile" to your needs if you wish
 2. Create your config for each of your projects within the "sites" directory (examples included)
+
+### Manual start (mainly intended for debugging)
 3. Start your PHP: `[absPathToPhp]/php-cgi.exe -b 127.0.0.1:9082` (9082 custom port, i use 82 for php version 8.2)
 4. Start caddy: `cd [directory]/caddy run --config Caddyfile`
 
-### (optional) if you wish to start caddy and php via GUI
-1. Configure your PHP paths in server-manager/config.json
-2. Double-click on start.gui.bat
-3. enjoy :)
+### GUI start
+3. Configure your PHP paths in server-manager/config.json
+4. Double-click on start.gui.bat \
+   The first time you start with "auto https on" you will be asked by windows if you want to allow the caddy as local certificate authority.
+5. enjoy :)
 
 #### Problems
 #### https not working?

@@ -1,0 +1,11 @@
+# Refer to the Caddy docs for more information:
+# https://caddyserver.com/docs/caddyfile
+
+{
+    email hackl.chris@googlemail.com
+    local_certs
+    # auto_https off
+}
+
+import snippets\global.conf
+import sites\*.conf

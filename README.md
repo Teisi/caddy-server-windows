@@ -6,7 +6,7 @@ This script (GUI) seems to ned administrator rights for default ports 80(http) /
 ## Installation
 Download [caddy server](https://caddyserver.com/download) and drop it in a location of your choice. \
 Rename the downloaded caddy file (e. g. caddy_windows_amd64.exe) to "caddy.exe"! \
-Then load the files of this repository ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/Teisi/caddy-server-windows) into the same folder, the folder should then look like this:
+Then load the files of this repository [![Latest Tag](https://img.shields.io/github/v/tag/Teisi/caddy-server-windows?label=Latest%20Tag)](https://github.com/Teisi/caddy-server-windows/tags) into the same folder, the folder should then look like this:
 
 - LocationOfYourChoice/caddy.exe \
 - LocationOfYourChoice/Caddyfile \

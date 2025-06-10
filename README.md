@@ -1,4 +1,5 @@
 # Super simple Caddy-Server files and config for windows only!
+Currently only tested on windows 10!
 
 ## Installation
 Download caddy and drop it in a location of your choice. Then load this repository into the same folder, the folder should look like this:

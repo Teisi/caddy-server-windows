@@ -30,5 +30,6 @@ if 0.0.0.0:443 is listed, try:
 `net stop http`
 
 Mostly this is caused by the service "Remote ... RAS" | "Routing and RAS".
-You can use caddy without https (see Caddyfile) or set this service to "manual",
+You can use caddy without https (see Caddyfile -> disable local_certs and enable auto_https off)
+OR set this service to "manual",
 to do this -> windows taskbar search for "service" (system) and there search for "Routing and RAS" -> right-click -> stop AND right-click -> settings -> "Starttype" set to manual.

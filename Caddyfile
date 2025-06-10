@@ -2,7 +2,7 @@
 # https://caddyserver.com/docs/caddyfile
 
 {
-    email hackl.chris@googlemail.com
+    email example@server.tld
     local_certs
     # auto_https off
 }

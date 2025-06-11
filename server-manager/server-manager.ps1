@@ -288,6 +288,265 @@ function Stop-AllServices {
     }
 }
 
+# Erstellen des Einstellungs-Dialogs
+function Add-PHPConfigGroup {
+    param (
+        [System.Windows.Forms.Panel]$parentPanel,
+        [ref]$yPosRef,
+        [ref]$configsRef
+    )
+
+    $newVersionGroup = New-Object System.Windows.Forms.GroupBox
+    $newVersionGroup.Location = New-Object System.Drawing.Point(5,$yPosRef.Value)
+    $newVersionGroup.Size = New-Object System.Drawing.Size(500,85)
+    $newVersionGroup.Text = "New PHP Configuration"
+
+    # Version
+    $newVersionLabel = New-Object System.Windows.Forms.Label
+    $newVersionLabel.Location = New-Object System.Drawing.Point(10,20)
+    $newVersionLabel.Size = New-Object System.Drawing.Size(60,20)
+    $newVersionLabel.Text = "Version:"
+
+    $newVersionBox = New-Object System.Windows.Forms.TextBox
+    $newVersionBox.Location = New-Object System.Drawing.Point(75,17)
+    $newVersionBox.Size = New-Object System.Drawing.Size(50,20)
+
+    # Path
+    $newPathLabel = New-Object System.Windows.Forms.Label
+    $newPathLabel.Location = New-Object System.Drawing.Point(10,45)
+    $newPathLabel.Size = New-Object System.Drawing.Size(60,20)
+    $newPathLabel.Text = "Path:"
+
+    $newPathBox = New-Object System.Windows.Forms.TextBox
+    $newPathBox.Location = New-Object System.Drawing.Point(75,42)
+    $newPathBox.Size = New-Object System.Drawing.Size(320,20)
+    $newPathBox.Name = "PathTextBox"
+    $newPathBox.Text = "C:\"
+    Set-Variable -Name 'pathTextBox' -Value $newPathBox -Scope Script
+
+    # Browse Button
+    $newBrowseButton = New-Object System.Windows.Forms.Button
+    $newBrowseButton.Location = New-Object System.Drawing.Point(400,41)
+    $newBrowseButton.Size = New-Object System.Drawing.Size(75,22)
+    $newBrowseButton.Text = "Browse..."
+
+    # Eventhandler für den Browse-Button
+    $newBrowseButton.Add_Click({
+        $fileDialog = New-Object System.Windows.Forms.OpenFileDialog
+        $fileDialog.Filter = "PHP-CGI|php-cgi.exe|All files|*.*"
+        if ($fileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+            $script:pathTextBox.Text = $fileDialog.FileName
+        }
+    })
+
+    # IP
+    $newIpLabel = New-Object System.Windows.Forms.Label
+    $newIpLabel.Location = New-Object System.Drawing.Point(140,20)
+    $newIpLabel.Size = New-Object System.Drawing.Size(30,20)
+    $newIpLabel.Text = "IP:"
+
+    $newIpBox = New-Object System.Windows.Forms.TextBox
+    $newIpBox.Location = New-Object System.Drawing.Point(175,17)
+    $newIpBox.Size = New-Object System.Drawing.Size(100,20)
+    $newIpBox.Text = "127.0.0.1:9000"
+
+    # Delete Button
+    $newDeleteButton = New-Object System.Windows.Forms.Button
+    $newDeleteButton.Location = New-Object System.Drawing.Point(400,16)
+    $newDeleteButton.Size = New-Object System.Drawing.Size(75,22)
+    $newDeleteButton.Text = "Delete"
+    $newDeleteButton.ForeColor = [System.Drawing.Color]::Red
+
+    $newDeleteButton.Add_Click({
+        $newVersionGroup.Dispose()
+        $configsRef.Value = $configsRef.Value | Where-Object { $_ -ne $newVersionGroup }
+        $tempY = 10
+        foreach ($group in $configsRef.Value) {
+            $group.Location = New-Object System.Drawing.Point(5,$tempY)
+            $tempY += 95
+        }
+        $yPosRef.Value = $tempY
+    })
+
+    $newVersionGroup.Controls.AddRange(@(
+        $newVersionLabel, $newVersionBox, $newPathLabel, $newPathBox,
+        $newBrowseButton, $newIpLabel, $newIpBox, $newDeleteButton
+    ))
+    $parentPanel.Controls.Add($newVersionGroup)
+    $configsRef.Value += $newVersionGroup
+    $yPosRef.Value += 95
+
+    return $newVersionGroup
+}
+
+function Show-Settings {
+    $settingsForm = New-Object System.Windows.Forms.Form
+    $settingsForm.Text = 'Settings'
+    $settingsForm.Size = New-Object System.Drawing.Size(600,400)
+    $settingsForm.StartPosition = 'CenterParent'
+    $settingsForm.FormBorderStyle = 'FixedDialog'
+    $settingsForm.MaximizeBox = $false
+    $settingsForm.MinimizeBox = $false
+
+    # PHP Konfigurationen
+    $phpGroupBox = New-Object System.Windows.Forms.GroupBox
+    $phpGroupBox.Location = New-Object System.Drawing.Point(10,10)
+    $phpGroupBox.Size = New-Object System.Drawing.Size(560,280)
+    $phpGroupBox.Text = "PHP Configurations"
+
+    $phpPanel = New-Object System.Windows.Forms.Panel
+    $phpPanel.Location = New-Object System.Drawing.Point(10,20)
+    $phpPanel.Size = New-Object System.Drawing.Size(540,250)
+    $phpPanel.AutoScroll = $true
+
+    $yPos = 10
+    $phpConfigs = @()
+
+    # Bestehende PHP-Konfigurationen laden
+    foreach ($version in $config.php.PSObject.Properties) {
+        $versionGroup = New-Object System.Windows.Forms.GroupBox
+        $versionGroup.Location = New-Object System.Drawing.Point(5,$yPos)
+        $versionGroup.Size = New-Object System.Drawing.Size(500,85)
+        $versionGroup.Text = "PHP $($version.Name)"
+
+        # Version
+        $versionLabel = New-Object System.Windows.Forms.Label
+        $versionLabel.Location = New-Object System.Drawing.Point(10,20)
+        $versionLabel.Size = New-Object System.Drawing.Size(60,20)
+        $versionLabel.Text = "Version:"
+
+        $versionBox = New-Object System.Windows.Forms.TextBox
+        $versionBox.Location = New-Object System.Drawing.Point(75,17)
+        $versionBox.Size = New-Object System.Drawing.Size(50,20)
+        $versionBox.Text = $version.Name
+
+        # Path
+        $pathLabel = New-Object System.Windows.Forms.Label
+        $pathLabel.Location = New-Object System.Drawing.Point(10,45)
+        $pathLabel.Size = New-Object System.Drawing.Size(60,20)
+        $pathLabel.Text = "Path:"
+
+        $pathBox = New-Object System.Windows.Forms.TextBox
+        $pathBox.Location = New-Object System.Drawing.Point(75,42)
+        $pathBox.Size = New-Object System.Drawing.Size(320,20)
+        $pathBox.Text = $version.Value.path
+
+        # Browse Button
+        $browseButton = New-Object System.Windows.Forms.Button
+        $browseButton.Location = New-Object System.Drawing.Point(400,41)
+        $browseButton.Size = New-Object System.Drawing.Size(75,22)
+        $browseButton.Text = "Browse..."
+        $browseButton.Add_Click({
+            $fileDialog = New-Object System.Windows.Forms.OpenFileDialog
+            $fileDialog.Filter = "PHP-CGI|php-cgi.exe|All files|*.*"
+            $fileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($pathBox.Text)
+            if ($fileDialog.ShowDialog() -eq 'OK') {
+                $pathBox.Text = $fileDialog.FileName
+            }
+        })
+
+        # IP
+        $ipLabel = New-Object System.Windows.Forms.Label
+        $ipLabel.Location = New-Object System.Drawing.Point(140,20)
+        $ipLabel.Size = New-Object System.Drawing.Size(30,20)
+        $ipLabel.Text = "IP:"
+
+        $ipBox = New-Object System.Windows.Forms.TextBox
+        $ipBox.Location = New-Object System.Drawing.Point(175,17)
+        $ipBox.Size = New-Object System.Drawing.Size(100,20)
+        $ipBox.Text = $version.Value.ip
+
+        # Delete Button
+        $deleteButton = New-Object System.Windows.Forms.Button
+        $deleteButton.Location = New-Object System.Drawing.Point(400,16)
+        $deleteButton.Size = New-Object System.Drawing.Size(75,22)
+        $deleteButton.Text = "Delete"
+        $deleteButton.ForeColor = [System.Drawing.Color]::Red
+        $deleteButton.Add_Click({
+            $versionGroup.Dispose()
+            $phpConfigs = $phpConfigs | Where-Object { $_ -ne $configGroup }
+            $yPos = 10
+            foreach ($group in $phpConfigs) {
+                $group.Location = New-Object System.Drawing.Point(5,$yPos)
+                $yPos += 95
+            }
+        })
+
+        $versionGroup.Controls.AddRange(@($versionLabel, $versionBox, $pathLabel, $pathBox, $browseButton, $ipLabel, $ipBox, $deleteButton))
+        $phpPanel.Controls.Add($versionGroup)
+        $phpConfigs += $versionGroup
+        $yPos += 95
+    }
+
+    # Add New PHP Button
+    $addButton = New-Object System.Windows.Forms.Button
+    $addButton.Location = New-Object System.Drawing.Point(10,290)
+    $addButton.Size = New-Object System.Drawing.Size(120,30)
+    $addButton.Text = "Add PHP Version"
+    $addButton.Add_Click({
+        Add-PHPConfigGroup -parentPanel $phpPanel -yPosRef ([ref]$yPos) -configsRef ([ref]$phpConfigs)
+    })
+
+    # Save Button
+    $saveButton = New-Object System.Windows.Forms.Button
+    $saveButton.Location = New-Object System.Drawing.Point(400,290)
+    $saveButton.Size = New-Object System.Drawing.Size(120,30)
+    $saveButton.Text = "Save"
+    $saveButton.Add_Click({
+        $newConfig = [PSCustomObject]@{
+            php = [PSCustomObject]@{}
+        }
+
+        foreach ($group in $phpConfigs) {
+            if (-not $group.Disposed) {
+                $version = ($group.Controls | Where-Object { $_.Size.Width -eq 50 -and $_.GetType().Name -eq "TextBox" } | Select-Object -First 1).Text
+                $path = ($group.Controls | Where-Object { $_.Size.Width -eq 320 -and $_.GetType().Name -eq "TextBox" } | Select-Object -First 1).Text
+                $ip = ($group.Controls | Where-Object { $_.Size.Width -eq 100 -and $_.GetType().Name -eq "TextBox" } | Select-Object -First 1).Text
+
+                if ($version -and $path -and $ip) {
+                    $versionConfig = [PSCustomObject]@{
+                        path = $path
+                        ip = $ip
+                    }
+                    Add-Member -InputObject $newConfig.php -MemberType NoteProperty -Name $version -Value $versionConfig
+                }
+            }
+        }
+
+        # Debug-Ausgabe zur Überprüfung
+        Write-Host "Saving configuration:"
+        Write-Host ($newConfig | ConvertTo-Json -Depth 10)
+
+        # Speichern der Konfiguration
+        $newConfig | ConvertTo-Json -Depth 10 | Set-Content -Path $configPath -Encoding UTF8
+
+        # Neu laden der Konfiguration
+        $script:config = Get-Content -Path $configPath | ConvertFrom-Json
+
+        [System.Windows.Forms.MessageBox]::Show(
+            "Settings saved successfully! Please restart the application to apply changes.",
+            "Success",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information)
+        $settingsForm.Close()
+    })
+
+    $phpGroupBox.Controls.Add($phpPanel)
+    $settingsForm.Controls.AddRange(@($phpGroupBox, $addButton, $saveButton))
+    $settingsForm.ShowDialog()
+}
+
+# Füge einen Settings-Button zur Hauptform hinzu
+$settingsButton = New-Object System.Windows.Forms.Button
+$settingsButton.Location = New-Object System.Drawing.Point(20,310)
+$settingsButton.Size = New-Object System.Drawing.Size(340,40)
+$settingsButton.Text = 'Settings'
+$settingsButton.BackColor = [System.Drawing.Color]::LightGray
+$form.Controls.Add($settingsButton)
+
+# Event Handler für Settings-Button
+$settingsButton.Add_Click({ Show-Settings })
+
 # Event Handler
 $startButton.Add_Click({ Start-AllServices })
 $stopButton.Add_Click({ Stop-AllServices })

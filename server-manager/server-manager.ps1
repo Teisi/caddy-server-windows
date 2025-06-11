@@ -45,7 +45,7 @@ $form.MaximizeBox = $false
 # Status Panel
 $statusPanel = New-Object System.Windows.Forms.Panel
 $statusPanel.Location = New-Object System.Drawing.Point(20,20)
-$statusPanel.Size = New-Object System.Drawing.Size(340,120)
+$statusPanel.Size = New-Object System.Drawing.Size(340,180)
 $statusPanel.BorderStyle = 'FixedSingle'
 
 # Dynamisch PHP Status Labels erstellen
@@ -73,19 +73,19 @@ $form.Controls.Add($statusPanel)
 
 # Buttons
 $startButton = New-Object System.Windows.Forms.Button
-$startButton.Location = New-Object System.Drawing.Point(20,160)
+$startButton.Location = New-Object System.Drawing.Point(20,210)
 $startButton.Size = New-Object System.Drawing.Size(340,40)
 $startButton.Text = 'Start All Services'
 $form.Controls.Add($startButton)
 
 $stopButton = New-Object System.Windows.Forms.Button
-$stopButton.Location = New-Object System.Drawing.Point(20,210)
+$stopButton.Location = New-Object System.Drawing.Point(20,260)
 $stopButton.Size = New-Object System.Drawing.Size(340,40)
 $stopButton.Text = 'Stop All Services'
 $form.Controls.Add($stopButton)
 
 $refreshButton = New-Object System.Windows.Forms.Button
-$refreshButton.Location = New-Object System.Drawing.Point(20,260)
+$refreshButton.Location = New-Object System.Drawing.Point(20,310)
 $refreshButton.Size = New-Object System.Drawing.Size(340,40)
 $refreshButton.Text = 'Refresh Status'
 $form.Controls.Add($refreshButton)
@@ -538,7 +538,7 @@ function Show-Settings {
 
 # Füge einen Settings-Button zur Hauptform hinzu
 $settingsButton = New-Object System.Windows.Forms.Button
-$settingsButton.Location = New-Object System.Drawing.Point(20,310)
+$settingsButton.Location = New-Object System.Drawing.Point(20,360)
 $settingsButton.Size = New-Object System.Drawing.Size(340,40)
 $settingsButton.Text = 'Settings'
 $settingsButton.BackColor = [System.Drawing.Color]::LightGray

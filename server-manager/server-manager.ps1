@@ -24,28 +24,17 @@ if (-not $caddyExePath) {
 # 3. Wenn immer noch nicht gefunden, zeige Fehlermeldung
 if (-not $caddyExePath) {
     [System.Windows.Forms.MessageBox]::Show(
-        "Caddy.exe was not found in the PATH or parent directory.`n`nPlease make sure Caddy is installed correctly or is in the directory above the ‘server-manager’ folder.",
+        "Caddy.exe wurde weder im PATH noch im übergeordneten Verzeichnis gefunden.`n`nBitte stellen Sie sicher, dass Caddy korrekt installiert ist oder sich im Verzeichnis über dem 'server-manager' Ordner befindet.",
         "Error",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Error)
     exit
 }
 
-# Caddy Basis-Pfad und Caddyfile-Pfad ermitteln
 $caddyBasePath = Split-Path -Parent $caddyExePath
 $caddyFilePath = Join-Path $caddyBasePath "Caddyfile"
 
-# Überprüfe ob Caddyfile existiert
-if (-not (Test-Path $caddyFilePath)) {
-    [System.Windows.Forms.MessageBox]::Show(
-        "Caddyfile was not found in: $caddyFilePath`n`nPlease make sure that the caddyfile is located in the same directory as caddy.exe.",
-        "Error",
-        [System.Windows.Forms.MessageBoxButtons]::OK,
-        [System.Windows.Forms.MessageBoxIcon]::Error)
-    exit
-}
-
-# Erstelle das Hauptfenster
+# GUI erstellen
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'Local Development Server Manager'
 $form.Size = New-Object System.Drawing.Size(400,500)
@@ -87,43 +76,19 @@ $startButton = New-Object System.Windows.Forms.Button
 $startButton.Location = New-Object System.Drawing.Point(20,160)
 $startButton.Size = New-Object System.Drawing.Size(340,40)
 $startButton.Text = 'Start All Services'
-$startButton.BackColor = [System.Drawing.Color]::LightGreen
 $form.Controls.Add($startButton)
 
 $stopButton = New-Object System.Windows.Forms.Button
 $stopButton.Location = New-Object System.Drawing.Point(20,210)
 $stopButton.Size = New-Object System.Drawing.Size(340,40)
 $stopButton.Text = 'Stop All Services'
-$stopButton.BackColor = [System.Drawing.Color]::LightCoral
 $form.Controls.Add($stopButton)
 
 $refreshButton = New-Object System.Windows.Forms.Button
 $refreshButton.Location = New-Object System.Drawing.Point(20,260)
 $refreshButton.Size = New-Object System.Drawing.Size(340,40)
 $refreshButton.Text = 'Refresh Status'
-$refreshButton.BackColor = [System.Drawing.Color]::LightBlue
 $form.Controls.Add($refreshButton)
-
-# Maybe TODO Feature: URLs Panel
-# $urlsPanel = New-Object System.Windows.Forms.Panel
-# $urlsPanel.Location = New-Object System.Drawing.Point(20,320)
-# $urlsPanel.Size = New-Object System.Drawing.Size(340,120)
-# $urlsPanel.BorderStyle = 'FixedSingle'
-
-# $urlLabel = New-Object System.Windows.Forms.Label
-# $urlLabel.Location = New-Object System.Drawing.Point(10,10)
-# $urlLabel.Size = New-Object System.Drawing.Size(320,100)
-
-# # Dynamische URL-Liste basierend auf PHP-Versionen erstellen
-# $urls = ""
-# foreach ($version in $config.php.PSObject.Properties) {
-#     $urls += "http://php$($version.Name -replace '\.','').localhost`n"
-#     $urls += "https://php$($version.Name -replace '\.','').localhost`n"
-# }
-# $urlLabel.Text = "Available URLs:`n`n$urls"
-
-# $urlsPanel.Controls.Add($urlLabel)
-# $form.Controls.Add($urlsPanel)
 
 # Funktionen
 function Get-ServiceStatus {
@@ -133,12 +98,9 @@ function Get-ServiceStatus {
         [string]$processPath
     )
 
-    # Prüfe ob der Task existiert
-    $taskExists = schtasks /query /tn $taskName 2>$null
-
-    # Prüfe ob der Prozess läuft (suche nach php-cgi.exe mit dem spezifischen Pfad)
+    # Prüfe ob der Prozess läuft
     $processInfo = Get-WmiObject Win32_Process -Filter "Name = 'php-cgi.exe'" |
-                  Where-Object { $_.CommandLine -like "*$processPath*" }
+                  Where-Object { $_.CommandLine -like "*${processPath}*" }
 
     if ($processInfo) {
         return @{
@@ -146,21 +108,60 @@ function Get-ServiceStatus {
             Message = "Running (PID: $($processInfo.ProcessId))"
             Color = [System.Drawing.Color]::Green
         }
-    } elseif ($taskExists) {
-        # Task existiert, aber Prozess läuft nicht
+    }
+
+    # Wenn der Prozess nicht läuft, prüfe den Task-Status
+    $taskExists = schtasks /query /tn $taskName 2>$null
+    if ($LASTEXITCODE -eq 0) {
         return @{
             Running = $false
             Message = "Task exists but not running"
             Color = [System.Drawing.Color]::Orange
         }
-    } else {
-        # Weder Task noch Prozess existieren
-        return @{
-            Running = $false
-            Message = "Stopped"
-            Color = [System.Drawing.Color]::Red
-        }
     }
+
+    return @{
+        Running = $false
+        Message = "Stopped"
+        Color = [System.Drawing.Color]::Red
+    }
+}
+
+function Start-PHPService {
+    param (
+        [string]$version,
+        [string]$taskName,
+        [string]$phpPath,
+        [string]$phpIp
+    )
+
+    # Prüfe ob PHP existiert
+    if (-not (Test-Path $phpPath)) {
+        return "PHP ${version}: Datei nicht gefunden: ${phpPath}"
+    }
+
+    # Lösche existierenden Task
+    schtasks /delete /tn $taskName /f 2>$null
+
+    # Erstelle und starte Task
+    $result = schtasks /create /tn $taskName /tr "`"${phpPath}`" -b ${phpIp}" /sc onstart /ru System /rl HIGHEST /f
+    if ($LASTEXITCODE -ne 0) {
+        return "PHP ${version}: Fehler beim Erstellen des Tasks: ${result}"
+    }
+
+    $result = schtasks /run /tn $taskName
+    if ($LASTEXITCODE -ne 0) {
+        return "PHP ${version}: Fehler beim Starten des Tasks: ${result}"
+    }
+
+    # Warte und prüfe
+    Start-Sleep -Seconds 2
+    $status = Get-ServiceStatus -version $version -taskName $taskName -processPath $phpPath
+    if (-not $status.Running) {
+        return "PHP ${version}: Dienst konnte nicht gestartet werden"
+    }
+
+    return $null
 }
 
 function Update-Status {
@@ -188,6 +189,8 @@ function Update-Status {
 
 function Start-AllServices {
     $startButton.Enabled = $false
+    $errors = @()
+
     try {
         # PHP Services starten
         foreach ($version in $config.php.PSObject.Properties) {
@@ -195,17 +198,49 @@ function Start-AllServices {
             $phpPath = $version.Value.path
             $phpIp = $version.Value.ip
 
-            schtasks /create /tn $taskName /tr "`"$phpPath`" -b $phpIp" /sc onstart /ru System /rl HIGHEST /f
-            schtasks /run /tn $taskName
+            $error = Start-PHPService -version $version.Name -taskName $taskName -phpPath $phpPath -phpIp $phpIp
+            if ($error) {
+                $errors += $error
+            }
         }
 
         # Caddy starten
-        Start-Process $caddyExePath -ArgumentList "run --config $caddyFilePath" -WorkingDirectory $caddyBasePath -WindowStyle Hidden -Verb RunAs
+        $caddyProcess = Get-Process -Name "caddy" -ErrorAction SilentlyContinue
+        if ($caddyProcess) {
+            Stop-Process -Name "caddy" -Force
+            Start-Sleep -Seconds 1
+        }
 
-        [System.Windows.Forms.MessageBox]::Show("Services started successfully!", "Success")
+        Start-Process $caddyExePath -ArgumentList "run --config $caddyFilePath" -WorkingDirectory $caddyBasePath -WindowStyle Hidden -Verb RunAs
+        Start-Sleep -Seconds 2
+
+        # Prüfe ob Caddy läuft
+        $caddyProcess = Get-Process -Name "caddy" -ErrorAction SilentlyContinue
+        if (-not $caddyProcess) {
+            $errors += "Caddy konnte nicht gestartet werden"
+        }
+
+        # Zeige entsprechende Meldung
+        if ($errors.Count -gt 0) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Folgende Fehler sind aufgetreten:`n`n$($errors -join "`n")",
+                "Fehler beim Starten der Dienste",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error)
+        } else {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Alle Dienste wurden erfolgreich gestartet!",
+                "Erfolg",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information)
+        }
     }
     catch {
-        [System.Windows.Forms.MessageBox]::Show("Error starting services: $_", "Error")
+        [System.Windows.Forms.MessageBox]::Show(
+            "Unerwarteter Fehler: $_",
+            "Fehler",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error)
     }
     finally {
         $startButton.Enabled = $true
@@ -221,15 +256,31 @@ function Stop-AllServices {
             $taskName = "PHP$($version.Name -replace '\.','')_CGI"
             schtasks /end /tn $taskName 2>$null
             schtasks /delete /tn $taskName /f 2>$null
+
+            # Finde und beende alle zugehörigen PHP-Prozesse
+            $phpPath = $version.Value.path
+            $processes = Get-WmiObject Win32_Process -Filter "Name = 'php-cgi.exe'" |
+                        Where-Object { $_.CommandLine -like "*$phpPath*" }
+            foreach ($process in $processes) {
+                $process.Terminate()
+            }
         }
 
         # Caddy stoppen
         Stop-Process -Name "caddy" -Force -ErrorAction SilentlyContinue
 
-        [System.Windows.Forms.MessageBox]::Show("Services stopped successfully!", "Success")
+        [System.Windows.Forms.MessageBox]::Show(
+            "Alle Dienste wurden gestoppt!",
+            "Erfolg",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information)
     }
     catch {
-        [System.Windows.Forms.MessageBox]::Show("Error stopping services: $_", "Error")
+        [System.Windows.Forms.MessageBox]::Show(
+            "Fehler beim Stoppen der Dienste: $_",
+            "Fehler",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error)
     }
     finally {
         $stopButton.Enabled = $true

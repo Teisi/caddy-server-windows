@@ -51,25 +51,122 @@ $statusPanel.BorderStyle = 'FixedSingle'
 # Dynamisch PHP Status Labels erstellen
 $yPos = 10
 $statusLabels = @{}
+$restartButtons = @{}
 
 foreach ($version in $config.php.PSObject.Properties) {
+    # Status Label
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Point(10,$yPos)
     $label.Size = New-Object System.Drawing.Size(200,20)
     $label.Text = "PHP $($version.Name): Checking..."
     $statusPanel.Controls.Add($label)
     $statusLabels[$version.Name] = $label
+
+    # Restart Button für PHP
+    $restartButton = New-Object System.Windows.Forms.Button
+    $restartButton.Location = New-Object System.Drawing.Point(220,$yPos)
+    $restartButton.Size = New-Object System.Drawing.Size(90,20)
+    $restartButton.Text = "Restart"
+    $restartButton.Tag = $version.Name  # Speichere PHP Version im Tag
+    $restartButton.Add_Click({
+        $phpVersion = $this.Tag
+        $taskName = "PHP$($phpVersion -replace '\.','')_CGI"
+        $versionConfig = $config.php.$phpVersion
+
+        # Stoppe den aktuellen Prozess
+        $processInfo = Get-WmiObject Win32_Process -Filter "Name = 'php-cgi.exe'" |
+                      Where-Object { $_.CommandLine -like "*$($versionConfig.path)*" }
+        if ($processInfo) {
+            $processInfo.Terminate()
+        }
+
+        # Lösche und erstelle den Task neu
+        schtasks /delete /tn $taskName /f 2>$null
+        $result = schtasks /create /tn $taskName /tr "`"$($versionConfig.path)`" -b $($versionConfig.ip)" /sc onstart /ru System /rl HIGHEST /f
+        if ($LASTEXITCODE -eq 0) {
+            $result = schtasks /run /tn $taskName
+            if ($LASTEXITCODE -eq 0) {
+                [System.Windows.Forms.MessageBox]::Show(
+                    "PHP ${phpVersion} wurde erfolgreich neugestartet!",
+                    "Erfolg",
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Information)
+            } else {
+                [System.Windows.Forms.MessageBox]::Show(
+                    "Fehler beim Starten von PHP ${phpVersion}",
+                    "Fehler",
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Error)
+            }
+        }
+        Update-Status
+    })
+    $statusPanel.Controls.Add($restartButton)
+    $restartButtons[$version.Name] = $restartButton
+
     $yPos += 30
 }
 
-# Caddy Status Label
+# Caddy Status Label und Restart Button
 $labelCaddy = New-Object System.Windows.Forms.Label
 $labelCaddy.Location = New-Object System.Drawing.Point(10,$yPos)
 $labelCaddy.Size = New-Object System.Drawing.Size(200,20)
 $labelCaddy.Text = 'Caddy: Checking...'
 $statusPanel.Controls.Add($labelCaddy)
 
+# Restart Button für Caddy
+$restartCaddyButton = New-Object System.Windows.Forms.Button
+$restartCaddyButton.Location = New-Object System.Drawing.Point(220,$yPos)
+$restartCaddyButton.Size = New-Object System.Drawing.Size(90,20)
+$restartCaddyButton.Text = "Restart"
+$restartCaddyButton.Add_Click({
+    # Stoppe Caddy
+    $caddyProcess = Get-Process -Name "caddy" -ErrorAction SilentlyContinue
+    if ($caddyProcess) {
+        Stop-Process -Name "caddy" -Force
+        Start-Sleep -Seconds 1
+    }
+
+    # Starte Caddy neu
+    Start-Process $caddyExePath -ArgumentList "run --config $caddyFilePath" -WorkingDirectory $caddyBasePath -WindowStyle Hidden -Verb RunAs
+    Start-Sleep -Seconds 2
+
+    # Prüfe ob Caddy läuft
+    $caddyProcess = Get-Process -Name "caddy" -ErrorAction SilentlyContinue
+    if ($caddyProcess) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Caddy wurde erfolgreich neugestartet!",
+            "Erfolg",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information)
+    } else {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Fehler beim Neustarten von Caddy",
+            "Fehler",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error)
+    }
+    Update-Status
+})
+$statusPanel.Controls.Add($restartCaddyButton)
+
 $form.Controls.Add($statusPanel)
+
+# Alle anderen Buttons entsprechend nach rechts verschieben
+$startButton.Location = New-Object System.Drawing.Point(20,160)
+$startButton.Size = New-Object System.Drawing.Size(440,40)  # Breite angepasst
+
+$stopButton.Location = New-Object System.Drawing.Point(20,210)
+$stopButton.Size = New-Object System.Drawing.Size(440,40)  # Breite angepasst
+
+$refreshButton.Location = New-Object System.Drawing.Point(20,260)
+$refreshButton.Size = New-Object System.Drawing.Size(440,40)  # Breite angepasst
+
+$settingsButton.Location = New-Object System.Drawing.Point(20,310)
+$settingsButton.Size = New-Object System.Drawing.Size(440,40)  # Breite angepasst
+
+# Form-Größe anpassen
+$form.Size = New-Object System.Drawing.Size(500,500)  # Breite von 400 auf 500 erhöht
 
 # Buttons
 $startButton = New-Object System.Windows.Forms.Button
@@ -161,7 +258,14 @@ function Start-PHPService {
         return "PHP ${version}: Dienst konnte nicht gestartet werden"
     }
 
-    return $null
+    # Nach erfolgreichem Start des PHP-Dienstes:
+    if ($status.Running) {
+        # Starte den Watchdog
+        Start-PHPWatchdog -version $version -phpPath $phpPath -phpIp $phpIp -taskName $taskName
+        return $null
+    }
+
+    return "PHP ${version}: Dienst konnte nicht gestartet werden"
 }
 
 function Update-Status {
@@ -254,6 +358,10 @@ function Stop-AllServices {
         # PHP Services stoppen
         foreach ($version in $config.php.PSObject.Properties) {
             $taskName = "PHP$($version.Name -replace '\.','')_CGI"
+
+            # Stoppe zuerst den Watchdog
+            Stop-PHPWatchdog -version $version.Name
+
             schtasks /end /tn $taskName 2>$null
             schtasks /delete /tn $taskName /f 2>$null
 

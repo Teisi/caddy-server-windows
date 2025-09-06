@@ -5,7 +5,7 @@ Not for production usage and manly for me and my company, but feel free to use i
 This script (GUI) seems to ned administrator rights for default ports 80(http) / 443(https) therefore windows will ask you for permission.
 
 ## Installation
-1. Dowload the ![CaddyManager.exe](CaddyManager/bin/Release/net9.0-windows/publish/ "CaddyManager.exe") to "LocationOfYourChoice".
+1. Dowload the [CaddyManager.exe](Releases/x64/CaddyManager.zip "CaddyManager.exe") to "LocationOfYourChoice".
 2. Double-click on "CaddyManager.exe".
 3. Enjoy :)
 
